@@ -53,7 +53,7 @@ function generateChartData(basePrice: number, points = 30) {
 
 async function fetchYahooQuote(symbol: string) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout for fast fallback
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
 
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d`;
@@ -95,7 +95,7 @@ async function fetchYahooQuote(symbol: string) {
       }
     }
   } catch {
-    // Fall back to generated mock data
+    // Fall back
   } finally {
     clearTimeout(timeoutId);
   }
