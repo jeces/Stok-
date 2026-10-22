@@ -1,0 +1,26 @@
+
+> my-app@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 2s
+ ○ Compiling / ...
+ ✓ Compiled / in 10.3s (1562 modules)
+ GET / 200 in 11254ms
+ ✓ Compiled in 1001ms (768 modules)
+ ○ Compiling /api/stocks ...
+ ✓ Compiled /api/stocks in 6.4s (804 modules)
+ ✓ Compiled (808 modules)
+ GET / 200 in 4070ms
+ GET /api/exchanges 200 in 28ms
+ GET /api/community?symbol=NVDA 200 in 44ms
+ GET /api/stocks?symbol=NVDA 200 in 51ms
+ GET /api/stocks 200 in 52ms
+ GET /api/exchanges 200 in 50ms
+ GET /api/community?symbol=NVDA 200 in 42ms
+ GET /api/stocks?symbol=NVDA 200 in 36ms
+ GET /api/stocks 200 in 35ms
+[?25h
