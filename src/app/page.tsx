@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ExchangeTickerBar from '@/components/ExchangeTickerBar';
 import Header from '@/components/Header';
 import StockChart, { StockDetail } from '@/components/StockChart';
@@ -17,6 +17,12 @@ export default function Home() {
   const [selectedStockDetail, setSelectedStockDetail] = useState<StockDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Timeframe and MA States
+  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '1Y' | '5Y' | '10Y'>('1D');
+  const [showMA50, setShowMA50] = useState<boolean>(true);
+  const [showMA100, setShowMA100] = useState<boolean>(true);
+  const [showMA200, setShowMA200] = useState<boolean>(true);
+
   // Fetch list of stocks
   const fetchStocks = async () => {
     try {
@@ -31,9 +37,9 @@ export default function Home() {
   };
 
   // Fetch detailed stock quote & chart
-  const fetchStockDetail = async (symbol: string) => {
+  const fetchStockDetail = useCallback(async (symbol: string, tf: string) => {
     try {
-      const res = await fetch(`/api/stocks?symbol=${symbol}`);
+      const res = await fetch(`/api/stocks?symbol=${symbol}&timeframe=${tf}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedStockDetail(data);
@@ -43,25 +49,25 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStocks();
-    fetchStockDetail(selectedSymbol);
+    fetchStockDetail(selectedSymbol, timeframe);
 
     // Auto refresh stock details every 5 seconds for real-time feel
     const interval = setInterval(() => {
       fetchStocks();
-      fetchStockDetail(selectedSymbol);
+      fetchStockDetail(selectedSymbol, timeframe);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [selectedSymbol]);
+  }, [selectedSymbol, timeframe, fetchStockDetail]);
 
   const handleSelectStock = (symbol: string) => {
     setSelectedSymbol(symbol);
     setLoading(true);
-    fetchStockDetail(symbol);
+    fetchStockDetail(symbol, timeframe);
   };
 
   return (
@@ -87,10 +93,20 @@ export default function Home() {
                   <span>주식 차트 및 실시간 시세를 불러오는 중...</span>
                 </div>
               ) : selectedStockDetail ? (
-                <StockChart stock={selectedStockDetail} />
+                <StockChart
+                  stock={selectedStockDetail}
+                  timeframe={timeframe}
+                  setTimeframe={setTimeframe}
+                  showMA50={showMA50}
+                  setShowMA50={setShowMA50}
+                  showMA100={showMA100}
+                  setShowMA100={setShowMA100}
+                  showMA200={showMA200}
+                  setShowMA200={setShowMA200}
+                />
               ) : null}
 
-              {/* Related Stock News & Community Preview */}
+              {/* Related Stock Community */}
               <div className="grid grid-cols-1 gap-8">
                 <CommunityFeed
                   currentSymbol={selectedStockDetail?.symbol || selectedSymbol}
@@ -124,7 +140,7 @@ export default function Home() {
           <div className="space-y-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">실시간 증시·환율 뉴스</h1>
-              <p className="text-slate-400 text-sm">구글 및 주요 금융 언론사 실시간 크롤링 뉴스입니다.</p>
+              <p className="text-slate-400 text-sm">네이버 및 언론사 실시간 라이브 뉴스입니다.</p>
             </div>
             <NewsFeed />
           </div>

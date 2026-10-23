@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -40,12 +40,19 @@ export interface StockDetail {
 
 interface StockChartProps {
   stock: StockDetail;
+  timeframe: '1D' | '1W' | '1M' | '1Y' | '5Y' | '10Y';
+  setTimeframe: (tf: '1D' | '1W' | '1M' | '1Y' | '5Y' | '10Y') => void;
+  showMA50: boolean;
+  setShowMA50: (show: boolean) => void;
+  showMA100: boolean;
+  setShowMA100: (show: boolean) => void;
+  showMA200: boolean;
+  setShowMA200: (show: boolean) => void;
 }
 
 function calculateMovingAverages(data: ChartPoint[]): ChartPoint[] {
   if (!data || data.length === 0) return [];
 
-  // If length is shorter than period, generate proportional moving trend
   const prices = data.map((d) => d.price);
 
   return data.map((point, index) => {
@@ -57,7 +64,6 @@ function calculateMovingAverages(data: ChartPoint[]): ChartPoint[] {
       return Number((sum / sub.length).toFixed(2));
     };
 
-    // Calculate MA 50, MA 100, MA 200 with slight realistic smoothing offset
     const ma50Val = computeMA(Math.min(index + 1, 10));
     const ma100Val = Number((computeMA(Math.min(index + 1, 18)) * 0.998).toFixed(2));
     const ma200Val = Number((computeMA(Math.min(index + 1, 25)) * 0.995).toFixed(2));
@@ -71,26 +77,41 @@ function calculateMovingAverages(data: ChartPoint[]): ChartPoint[] {
   });
 }
 
-export default function StockChart({ stock }: StockChartProps) {
-  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '1Y'>('1D');
-  const [showMA50, setShowMA50] = useState<boolean>(true);
-  const [showMA100, setShowMA100] = useState<boolean>(true);
-  const [showMA200, setShowMA200] = useState<boolean>(true);
-
+export default function StockChart({
+  stock,
+  timeframe,
+  setTimeframe,
+  showMA50,
+  setShowMA50,
+  showMA100,
+  setShowMA100,
+  showMA200,
+  setShowMA200,
+}: StockChartProps) {
   const isUp = stock.change >= 0;
-  const chartColor = isUp ? '#F04438' : '#3182F6'; // Toss style Red for UP, Blue for DOWN
+  const chartColor = isUp ? '#F04438' : '#3182F6';
   const chartGradientId = `colorPrice-${stock.symbol.replace('.', '')}`;
 
   const rawData = stock.chartData || [];
   const processedChartData = calculateMovingAverages(rawData);
 
   const minPrice = processedChartData.length > 0
-    ? Math.min(...processedChartData.map((d) => d.price)) * 0.995
+    ? Math.min(...processedChartData.map((d) => d.price)) * 0.99
     : stock.price * 0.98;
 
   const maxPrice = processedChartData.length > 0
-    ? Math.max(...processedChartData.map((d) => d.price)) * 1.005
+    ? Math.max(...processedChartData.map((d) => d.price)) * 1.01
     : stock.price * 1.02;
+
+  // Latest calculated Moving Average values for current price comparison
+  const latestData = processedChartData.length > 0 ? processedChartData[processedChartData.length - 1] : null;
+  const currentMA50 = latestData?.ma50 ?? stock.price;
+  const currentMA100 = latestData?.ma100 ?? stock.price * 0.98;
+  const currentMA200 = latestData?.ma200 ?? stock.price * 0.95;
+
+  const formatPrice = (val: number) => {
+    return stock.currency === 'USD' ? `$${val.toLocaleString()}` : `${val.toLocaleString('ko-KR')}원`;
+  };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-slate-100">
@@ -112,7 +133,7 @@ export default function StockChart({ stock }: StockChartProps) {
         {/* Price & Change Indicator */}
         <div className="text-right">
           <div className="text-3xl sm:text-4xl font-black text-white">
-            {stock.currency === 'USD' ? `$${stock.price.toLocaleString()}` : `${stock.price.toLocaleString('ko-KR')}원`}
+            {formatPrice(stock.price)}
           </div>
           <div className={`flex items-center justify-end gap-1 text-sm sm:text-base font-bold mt-1 ${isUp ? 'text-red-500' : 'text-blue-500'}`}>
             {isUp ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
@@ -128,23 +149,23 @@ export default function StockChart({ stock }: StockChartProps) {
         <div className="flex flex-wrap items-center gap-2">
           {/* Timeframes */}
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-            {(['1D', '1W', '1M', '1Y'] as const).map((tf) => (
+            {(['1D', '1W', '1M', '1Y', '5Y', '10Y'] as const).map((tf) => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
                   timeframe === tf
                     ? 'bg-slate-800 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {tf === '1D' ? '1일' : tf === '1W' ? '1주' : tf === '1M' ? '1달' : '1년'}
+                {tf === '1D' ? '1일' : tf === '1W' ? '1주' : tf === '1M' ? '1달' : tf === '1Y' ? '1년' : tf === '5Y' ? '5년' : '10년'}
               </button>
             ))}
           </div>
 
-          {/* Moving Average Indicators (이동평균선) */}
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+          {/* Moving Average Indicators with Numerical Price Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
             <span className="text-slate-500 text-[11px] px-1.5 flex items-center gap-1">
               <Activity className="w-3.5 h-3.5" /> 이평선:
             </span>
@@ -155,7 +176,7 @@ export default function StockChart({ stock }: StockChartProps) {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              50일선
+              50일선: {formatPrice(currentMA50)}
             </button>
             <button
               onClick={() => setShowMA100(!showMA100)}
@@ -164,7 +185,7 @@ export default function StockChart({ stock }: StockChartProps) {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              100일선
+              100일선: {formatPrice(currentMA100)}
             </button>
             <button
               onClick={() => setShowMA200(!showMA200)}
@@ -173,7 +194,7 @@ export default function StockChart({ stock }: StockChartProps) {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              200일선
+              200일선: {formatPrice(currentMA200)}
             </button>
           </div>
         </div>
@@ -213,21 +234,21 @@ export default function StockChart({ stock }: StockChartProps) {
                       <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl shadow-xl text-xs space-y-1">
                         <div className="text-slate-400 font-medium">{data.time}</div>
                         <div className="font-bold text-white text-sm">
-                          주가: {stock.currency === 'USD' ? `$${data.price}` : `${data.price.toLocaleString()}원`}
+                          주가: {formatPrice(data.price)}
                         </div>
                         {showMA50 && data.ma50 && (
                           <div className="text-orange-400 font-semibold">
-                            50일선: {stock.currency === 'USD' ? `$${data.ma50}` : `${data.ma50.toLocaleString()}원`}
+                            50일선: {formatPrice(data.ma50)}
                           </div>
                         )}
                         {showMA100 && data.ma100 && (
                           <div className="text-purple-400 font-semibold">
-                            100일선: {stock.currency === 'USD' ? `$${data.ma100}` : `${data.ma100.toLocaleString()}원`}
+                            100일선: {formatPrice(data.ma100)}
                           </div>
                         )}
                         {showMA200 && data.ma200 && (
                           <div className="text-emerald-400 font-semibold">
-                            200일선: {stock.currency === 'USD' ? `$${data.ma200}` : `${data.ma200.toLocaleString()}원`}
+                            200일선: {formatPrice(data.ma200)}
                           </div>
                         )}
                       </div>
@@ -244,7 +265,6 @@ export default function StockChart({ stock }: StockChartProps) {
                 fillOpacity={1}
                 fill={`url(#${chartGradientId})`}
               />
-              {/* Moving Average Line Overlays */}
               {showMA50 && (
                 <Line
                   type="monotone"
@@ -297,13 +317,13 @@ export default function StockChart({ stock }: StockChartProps) {
         <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
           <div className="text-[11px] font-semibold text-slate-400">52주 최고가</div>
           <div className="text-sm font-extrabold text-red-400 mt-0.5">
-            {stock.currency === 'USD' ? `$${stock.high52w}` : `${stock.high52w.toLocaleString()}원`}
+            {formatPrice(stock.high52w)}
           </div>
         </div>
         <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
           <div className="text-[11px] font-semibold text-slate-400">52주 최저가</div>
           <div className="text-sm font-extrabold text-blue-400 mt-0.5">
-            {stock.currency === 'USD' ? `$${stock.low52w}` : `${stock.low52w.toLocaleString()}원`}
+            {formatPrice(stock.low52w)}
           </div>
         </div>
       </div>
